@@ -20,42 +20,39 @@ public class ToyoteResourceHandler implements RequestHandler {
     private boolean intercepted;
 
     public ToyoteResourceHandler(String serverRootPath){
-        this.serverRootPath = serverRootPath;
         this.intercepted = false;
+        this.serverRootPath = serverRootPath;
     }
 
     private void retrieveResource(HttpRequest request, HttpResponse response) throws IOException {
-        String resourcesUrl = request.getRequestUrl();
 
-        Path resourcePath = Paths.get(this.serverRootPath + STATIC_FOLDER + resourcesUrl);
-
+        Path resourcePath = Paths.get(this.serverRootPath + STATIC_FOLDER + File.separator + request.getRequestUrl());
 
         byte[] fileContentData = Files.readAllBytes(resourcePath);
 
         String fileContentType = Files.probeContentType(resourcePath);
 
-
-        response.setContent(fileContentData);
         response.setStatusCode(HttpStatus.OK);
         response.addHeader("Content-Type", fileContentType);
         response.addHeader("Content-Length", fileContentData.length + "");
         response.addHeader("Content-Disposition", "inline");
+
+        response.setContent(fileContentData);
     }
 
     @Override
     public void handleRequest(InputStream inputStream, OutputStream outputStream) {
         try {
-            HttpRequest request = new HttpRequestImpl(Reader.readAllLines(inputStream));
+            String requestContent = Reader.readAllLines(inputStream);
+            HttpRequest request = new HttpRequestImpl(requestContent);
             HttpResponse response = new HttpResponseImpl();
-
             this.retrieveResource(request, response);
 
             Writer.writeBytes(response.getBytes(), outputStream);
+
             this.intercepted = true;
-            System.out.println(response.getStatusCode());
         } catch (IOException e) {
             this.intercepted = false;
-            System.out.println(e.getMessage());
             e.printStackTrace();
         }
 

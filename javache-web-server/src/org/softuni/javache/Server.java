@@ -2,13 +2,11 @@ package org.softuni.javache;
 
 import org.softuni.javache.http.HttpSessionStorageImpl;
 import org.softuni.javache.http.HttpSessionStorage;
+import org.softuni.javache.util.ServerConfig;
 
 import java.io.*;
 import java.net.*;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
@@ -27,37 +25,33 @@ public class Server {
 
     private ServerSocket server;
 
-    private Map<Integer, RequestHandler> requestHandlers;
+    private RequestHandlerLoader requestHandlerLoader;
 
     public Server(int port) {
         this.port = port;
         this.timeouts = 0;
-        this.requestHandlers = requestHandlers;
+        this.requestHandlerLoader = new RequestHandlerLoader();
         this.startLoadingProcess();
     }
 
     private void startLoadingProcess() {
-        //ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
-        this.initializeRequestHandlers();
+        ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
 
-
-        /*exec.scheduleAtFixedRate(new Runnable() {
+        exec.scheduleAtFixedRate(new Runnable() {
 
             @Override
             public void run() {
                 System.out.println("Loaded handlers.");
+                initializeRequestHandlers();
 
             }
-        }, 0, 10, TimeUnit.SECONDS);*/
+        }, 0, 10, TimeUnit.SECONDS);
 
 
     }
 
     private void initializeRequestHandlers(){
-        ServerConfig serverConfig = new ServerConfig(WebConstants.WEB_SERVER_ROOT_FOLDER_PATH);
-
-        this.requestHandlers = new RequestHandlerLoader(serverConfig)
-                .loadRequestHandlers();
+        this.requestHandlerLoader.loadRequestHandlers();
     }
 
     public void run() throws IOException {
@@ -73,7 +67,8 @@ public class Server {
                 clientSocket.setSoTimeout(SOCKET_TIMEOUT_MILLISECONDS);
 
                 ConnectionHandler connectionHandler
-                        = new ConnectionHandler(clientSocket, this.requestHandlers);
+                        = new ConnectionHandler(clientSocket,
+                        this.requestHandlerLoader.getLoadedRequestHandlers());
 
                 FutureTask<?> task = new FutureTask<>(connectionHandler, null);
                 task.run();

@@ -2,9 +2,7 @@ package org.softuni.javache;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Set;
 
 public class ConnectionHandler extends Thread {
     private Socket clientSocket;
@@ -47,6 +45,11 @@ public class ConnectionHandler extends Thread {
 
         for (RequestHandler requestHandler : this.requestHandlers.values()) {
             requestHandler.handleRequest(this.clientSocketInputStream, this.clientSocketOutputStream);
+
+            if(requestHandler.hasIntercepted()){
+                break;
+            }
+
         }
 
     }

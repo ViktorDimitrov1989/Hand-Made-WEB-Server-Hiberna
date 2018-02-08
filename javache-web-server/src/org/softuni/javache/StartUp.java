@@ -4,7 +4,6 @@ import java.util.Set;
 
 public class StartUp {
     public static void main(String[] args) {
-
          start(args);
     }
 
