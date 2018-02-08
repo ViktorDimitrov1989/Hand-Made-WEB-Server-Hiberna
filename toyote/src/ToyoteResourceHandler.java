@@ -27,7 +27,7 @@ public class ToyoteResourceHandler implements RequestHandler {
     private void retrieveResource(HttpRequest request, HttpResponse response) throws IOException {
         String resourcesUrl = request.getRequestUrl();
 
-        Path resourcePath = Paths.get(this.serverRootPath + "static" + resourcesUrl);
+        Path resourcePath = Paths.get(this.serverRootPath + STATIC_FOLDER + resourcesUrl);
 
 
         byte[] fileContentData = Files.readAllBytes(resourcePath);
@@ -52,8 +52,10 @@ public class ToyoteResourceHandler implements RequestHandler {
 
             Writer.writeBytes(response.getBytes(), outputStream);
             this.intercepted = true;
+            System.out.println(response.getStatusCode());
         } catch (IOException e) {
             this.intercepted = false;
+            System.out.println(e.getMessage());
             e.printStackTrace();
         }
 

@@ -5,10 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class RequestHandlerLoader {
     private static final String SERVER_FOLDER_PATH = "org/softuni/javache/";
@@ -23,15 +20,15 @@ public class RequestHandlerLoader {
         this.serverConfig = serverConfig;
     }
 
-    public LinkedList<RequestHandler> loadRequestHandlers(){
-        LinkedList<RequestHandler> requestHandlers = new LinkedList<>();
+    public Map<Integer, RequestHandler> loadRequestHandlers(){
+        Map<Integer, RequestHandler> requestHandlers = new TreeMap<>();
 
         this.loadFile(LIB_FOLDER_PATH, requestHandlers);
 
         return requestHandlers;
     }
 
-    public void loadFile(String path, LinkedList<RequestHandler> requestHandlers){
+    public void loadFile(String path, Map<Integer, RequestHandler> requestHandlers){
 
         File currentFileOrDirectory = new File(path);
 
@@ -70,10 +67,8 @@ public class RequestHandlerLoader {
 
                         int orderIndex = this.serverConfig.getHandlerIndexByName(clazzName);
 
-                        requestHandlers.add(orderIndex, clazzInstance);
+                        requestHandlers.putIfAbsent(orderIndex, clazzInstance);
                     }
-
-
 
                 } catch (ReflectiveOperationException
                         | MalformedURLException e) {

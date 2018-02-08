@@ -6,7 +6,9 @@ import org.softuni.javache.http.HttpSessionStorage;
 import java.io.*;
 import java.net.*;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,7 +27,7 @@ public class Server {
 
     private ServerSocket server;
 
-    private LinkedList<RequestHandler> requestHandlers;
+    private Map<Integer, RequestHandler> requestHandlers;
 
     public Server(int port) {
         this.port = port;
@@ -35,16 +37,18 @@ public class Server {
     }
 
     private void startLoadingProcess() {
-        ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+        //ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+        this.initializeRequestHandlers();
 
-        exec.scheduleAtFixedRate(new Runnable() {
+
+        /*exec.scheduleAtFixedRate(new Runnable() {
 
             @Override
             public void run() {
                 System.out.println("Loaded handlers.");
-                initializeRequestHandlers();
+
             }
-        }, 0, 10, TimeUnit.SECONDS);
+        }, 0, 10, TimeUnit.SECONDS);*/
 
 
     }

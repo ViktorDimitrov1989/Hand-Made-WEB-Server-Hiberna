@@ -3,6 +3,7 @@ package org.softuni.javache;
 import java.io.*;
 import java.net.Socket;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Set;
 
 public class ConnectionHandler extends Thread {
@@ -12,9 +13,9 @@ public class ConnectionHandler extends Thread {
 
     private OutputStream clientSocketOutputStream;
 
-    private LinkedList<RequestHandler> requestHandlers;
+    private Map<Integer, RequestHandler> requestHandlers;
 
-    public ConnectionHandler(Socket clientSocket, LinkedList<RequestHandler> requestHandlers) {
+    public ConnectionHandler(Socket clientSocket, Map<Integer, RequestHandler> requestHandlers) {
         this.initializeConnection(clientSocket);
         this.requestHandlers = requestHandlers;
     }
@@ -44,7 +45,7 @@ public class ConnectionHandler extends Thread {
 
     private void processRequest() {
 
-        for (RequestHandler requestHandler : this.requestHandlers) {
+        for (RequestHandler requestHandler : this.requestHandlers.values()) {
             requestHandler.handleRequest(this.clientSocketInputStream, this.clientSocketOutputStream);
         }
 
