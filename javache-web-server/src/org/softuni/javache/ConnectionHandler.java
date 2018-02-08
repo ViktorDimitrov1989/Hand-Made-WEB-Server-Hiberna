@@ -2,6 +2,7 @@ package org.softuni.javache;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.LinkedList;
 import java.util.Set;
 
 public class ConnectionHandler extends Thread {
@@ -11,9 +12,9 @@ public class ConnectionHandler extends Thread {
 
     private OutputStream clientSocketOutputStream;
 
-    private Set<RequestHandler> requestHandlers;
+    private LinkedList<RequestHandler> requestHandlers;
 
-    public ConnectionHandler(Socket clientSocket, Set<RequestHandler> requestHandlers) {
+    public ConnectionHandler(Socket clientSocket, LinkedList<RequestHandler> requestHandlers) {
         this.initializeConnection(clientSocket);
         this.requestHandlers = requestHandlers;
     }

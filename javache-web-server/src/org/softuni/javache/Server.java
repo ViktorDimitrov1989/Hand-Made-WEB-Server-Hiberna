@@ -5,6 +5,7 @@ import org.softuni.javache.http.HttpSessionStorage;
 
 import java.io.*;
 import java.net.*;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
@@ -24,7 +25,7 @@ public class Server {
 
     private ServerSocket server;
 
-    private Set<RequestHandler> requestHandlers;
+    private LinkedList<RequestHandler> requestHandlers;
 
     public Server(int port) {
         this.port = port;
@@ -49,7 +50,9 @@ public class Server {
     }
 
     private void initializeRequestHandlers(){
-        this.requestHandlers = new RequestHandlerLoader()
+        ServerConfig serverConfig = new ServerConfig(WebConstants.WEB_SERVER_ROOT_FOLDER_PATH);
+
+        this.requestHandlers = new RequestHandlerLoader(serverConfig)
                 .loadRequestHandlers();
     }
 

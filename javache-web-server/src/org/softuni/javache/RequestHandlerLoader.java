@@ -6,6 +6,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 public class RequestHandlerLoader {
@@ -15,16 +17,21 @@ public class RequestHandlerLoader {
             .getPath()
             .replace(SERVER_FOLDER_PATH, "lib");
 
+    private ServerConfig serverConfig;
 
-    public Set<RequestHandler> loadRequestHandlers(){
-        Set<RequestHandler> requestHandlers = new HashSet<>();
+    public RequestHandlerLoader(ServerConfig serverConfig){
+        this.serverConfig = serverConfig;
+    }
+
+    public LinkedList<RequestHandler> loadRequestHandlers(){
+        LinkedList<RequestHandler> requestHandlers = new LinkedList<>();
 
         this.loadFile(LIB_FOLDER_PATH, requestHandlers);
 
         return requestHandlers;
     }
 
-    public void loadFile(String path, Set<RequestHandler> requestHandlers){
+    public void loadFile(String path, LinkedList<RequestHandler> requestHandlers){
 
         File currentFileOrDirectory = new File(path);
 
@@ -50,16 +57,20 @@ public class RequestHandlerLoader {
                                         .toURL()
                         });
 
+                    String clazzName = childFileOrDirectory.getName()
+                            .replace(".class", "");
+
                     Class<?> clazz = urlClassLoader
-                            .loadClass(childFileOrDirectory.getName()
-                                    .replace(".class", ""));
+                            .loadClass(clazzName);
 
                     if(RequestHandler.class.isAssignableFrom(clazz)){
                         RequestHandler clazzInstance = (RequestHandler) clazz
                                 .getConstructor(String.class)
                                 .newInstance(WebConstants.WEB_SERVER_ROOT_FOLDER_PATH);
 
-                        requestHandlers.add(clazzInstance);
+                        int orderIndex = this.serverConfig.getHandlerIndexByName(clazzName);
+
+                        requestHandlers.add(orderIndex, clazzInstance);
                     }
 
 
