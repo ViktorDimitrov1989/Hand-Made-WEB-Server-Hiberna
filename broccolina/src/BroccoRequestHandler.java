@@ -1,7 +1,6 @@
 import org.softuni.javache.RequestHandler;
-import org.softuni.javache.http.HttpResponse;
-import org.softuni.javache.http.HttpResponseImpl;
-import org.softuni.javache.http.HttpStatus;
+import org.softuni.javache.http.*;
+import org.softuni.javache.io.Reader;
 import org.softuni.javache.io.Writer;
 
 import java.io.IOException;
@@ -22,16 +21,26 @@ public class BroccoRequestHandler implements RequestHandler{
     public void handleRequest(InputStream inputStream, OutputStream outputStream) {
 
         try {
-            HttpResponse response = new HttpResponseImpl();
 
-            response.setStatusCode(HttpStatus.OK);
+            String requestContent = Reader.readAllLines(inputStream);
 
-            response.addHeader("Content-Type", "text/html");
+            HttpRequest request = new HttpRequestImpl(requestContent);
 
-            response.setContent(("<h1>Hello world!</h1><h2>" + this.serverRootPath + "</h2>").getBytes());
+            if(request.getRequestUrl().equals("/")){
+                HttpResponse response = new HttpResponseImpl();
 
-            Writer.writeBytes(response.getBytes(), outputStream);
-            this.intercepted = true;
+                response.setStatusCode(HttpStatus.OK);
+
+                response.addHeader("Content-Type", "text/html");
+
+                response.setContent(("<h1>Hello world!</h1><h2>" + this.serverRootPath + "</h2>").getBytes());
+
+                Writer.writeBytes(response.getBytes(), outputStream);
+
+                this.intercepted = true;
+            }
+
+
         } catch (IOException e) {
             this.intercepted = false;
         }

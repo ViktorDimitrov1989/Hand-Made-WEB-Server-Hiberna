@@ -3,9 +3,13 @@ import org.softuni.javache.http.*;
 import org.softuni.javache.io.Reader;
 import org.softuni.javache.io.Writer;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class ToyoteResourceHandler implements RequestHandler {
 
@@ -20,57 +24,44 @@ public class ToyoteResourceHandler implements RequestHandler {
         this.intercepted = false;
     }
 
+    private void retrieveResource(HttpRequest request, HttpResponse response) throws IOException {
+        String resourcesUrl = request.getRequestUrl();
+
+        Path resourcePath = Paths.get(this.serverRootPath + "static" + resourcesUrl);
+
+
+        byte[] fileContentData = Files.readAllBytes(resourcePath);
+
+        String fileContentType = Files.probeContentType(resourcePath);
+
+
+        response.setContent(fileContentData);
+        response.setStatusCode(HttpStatus.OK);
+        response.addHeader("Content-Type", fileContentType);
+        response.addHeader("Content-Length", fileContentData.length + "");
+        response.addHeader("Content-Disposition", "inline");
+    }
+
     @Override
     public void handleRequest(InputStream inputStream, OutputStream outputStream) {
         try {
             HttpRequest request = new HttpRequestImpl(Reader.readAllLines(inputStream));
             HttpResponse response = new HttpResponseImpl();
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        /*try {
-
-
-            String resourceExtension = resourceUrl.substring(resourceUrl.lastIndexOf(".") + 1);
-
-            byte[] content =
-                    Files.readAllBytes(Paths.get(
-                            staticFolder
-                                    + resourceUrl));
-
-            response.setStatusCode(HttpStatus.OK);
-
-            response.addHeader("Content-Type", this.getContentType(resourceExtension));
-            response.addHeader("Content-Length", content.length + "");
-            response.addHeader("Content-Disposition", "inline");
-
+            this.retrieveResource(request, response);
 
             Writer.writeBytes(response.getBytes(), outputStream);
             this.intercepted = true;
         } catch (IOException e) {
             this.intercepted = false;
-        }*/
-
-
+            e.printStackTrace();
+        }
 
     }
+
 
     @Override
     public boolean hasIntercepted() {
-        return false;
-    }
-
-    private String getContentType(String resourceExtension) {
-        switch(resourceExtension) {
-            case "html": return "text/html";
-            case "css": return "text/css";
-            case "png": return "image/png";
-            case "jpg":
-            case "jpeg":
-                return "image/jpeg";
-            default: return "text/plain";
-        }
+        return this.intercepted;
     }
 }

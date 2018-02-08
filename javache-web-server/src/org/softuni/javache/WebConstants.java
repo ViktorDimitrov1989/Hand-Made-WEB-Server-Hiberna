@@ -13,7 +13,8 @@ public final class WebConstants {
     public static final String WEB_SERVER_ROOT_FOLDER_PATH = Server.class
             .getResource("")
             .getPath()
-            .replace(WEB_SERVER_PACKAGE_FOLDER_PATH, "");
+            .replace(WEB_SERVER_PACKAGE_FOLDER_PATH, "")
+            .substring(1);
 
 
     private WebConstants() { }
