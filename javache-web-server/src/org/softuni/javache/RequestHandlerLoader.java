@@ -53,7 +53,6 @@ public class RequestHandlerLoader {
                     continue;
                 }
 
-                //out/production/javache-web-server/lib/ToyoteResourceHandler.class
                 String className = currentFile.getName()
                         .replace(".class", "")
                         .replace("/", ".");
