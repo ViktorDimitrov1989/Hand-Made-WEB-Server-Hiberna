@@ -2,11 +2,10 @@ package org.softuni.javache;
 
 import org.softuni.javache.http.HttpSessionStorageImpl;
 import org.softuni.javache.http.HttpSessionStorage;
-import org.softuni.javache.util.ServerConfig;
+import org.softuni.javache.util.RequestHandlerLoader;
 
 import java.io.*;
 import java.net.*;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;

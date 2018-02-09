@@ -1,6 +1,8 @@
-package org.softuni.javache;
+package org.softuni.broccolina.util;
 
-import org.softuni.javache.util.ServerConfig;
+import org.softuni.broccolina.solet.HttpSolet;
+import org.softuni.javache.RequestHandler;
+import org.softuni.javache.WebConstants;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,15 +14,23 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class RequestHandlerLoader {
+public class SoletLoader {
 
-    private static final String LIB_FOLDER_PATH = WebConstants.WEB_SERVER_ROOT_FOLDER_PATH + "lib";
+    public static String APPLICATION_FOLDER_PATH;
 
-    private Map<Integer, RequestHandler> loadedRequestHandlers;
+    private Map<String, HttpSolet> loadedSoletsByApplicationName;
+
+    public SoletLoader(String serverRootPath){
+        this.APPLICATION_FOLDER_PATH =
+                serverRootPath + "apps";
+
+        this.loadedSoletsByApplicationName = new HashMap<>();
+    }
+
 
     private void loadLibraries(String libFolderPath) throws IOException {
 
-        File libDirectory = new File(LIB_FOLDER_PATH);
+        File libDirectory = new File(libFolderPath);
 
         if(libDirectory.exists() && libDirectory.isDirectory()){
 
@@ -39,7 +49,6 @@ public class RequestHandlerLoader {
 
     private void loadLibrary(JarFile library, String canonicalPath) {
         Enumeration<JarEntry> fileEntries = library.entries();
-        ServerConfig serverConfig = new ServerConfig();
 
         try {
             URL[] urls = { new URL("jar:file:" + canonicalPath + "!/") };
@@ -57,19 +66,22 @@ public class RequestHandlerLoader {
                         .replace(".class", "")
                         .replace("/", ".");
 
-                Class handlerClass = ucl.loadClass(className);
+                System.out.println(className);
 
-                if(RequestHandler.class.isAssignableFrom(handlerClass)){
+                Class soletClazz = ucl.loadClass(className);
 
-                    RequestHandler handlerObj = (RequestHandler) handlerClass.getConstructor(String.class)
-                            .newInstance(WebConstants.WEB_SERVER_ROOT_FOLDER_PATH);
+                if(HttpSolet.class.isAssignableFrom(soletClazz)){
 
-                    this.loadedRequestHandlers
-                            .putIfAbsent(serverConfig
-                                    .getHandlerIndexByName(handlerObj
-                                            .getClass()
-                                            .getSimpleName()),
-                                    handlerObj);
+                    HttpSolet soletObj = (HttpSolet) soletClazz.getConstructor()
+                            .newInstance();
+
+                    String applicationPath = new File(canonicalPath).getParent();
+
+                    this.loadedSoletsByApplicationName
+                            .putIfAbsent(applicationPath
+                                            .substring(applicationPath
+                                                    .lastIndexOf("/") + 1),
+                                    soletObj);
                 }
 
             }
@@ -92,20 +104,33 @@ public class RequestHandlerLoader {
 
     }
 
-    public Map<Integer, RequestHandler> getLoadedRequestHandlers(){
-        return Collections.unmodifiableMap(this.loadedRequestHandlers);
+    public Map<String, HttpSolet> getLoadedSolets(){
+        return Collections.unmodifiableMap(this.loadedSoletsByApplicationName);
     }
 
-    public void loadRequestHandlers(){
-        this.loadedRequestHandlers = new TreeMap<>();
+    public void loadSolets(){
+        this.loadedSoletsByApplicationName = new HashMap<>();
 
         try {
-            this.loadLibraries(LIB_FOLDER_PATH);
+            File appsDir = new File(this.APPLICATION_FOLDER_PATH);
+
+            if(!appsDir.exists()){
+                return;
+            }
+
+            for (File file : appsDir.listFiles()) {
+                this.loadLibraries(file.getCanonicalPath());
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
 
     }
+
+
+
+
 
 
 
