@@ -1,8 +1,7 @@
 package org.softuni.broccolina.util;
 
 import org.softuni.broccolina.solet.HttpSolet;
-import org.softuni.javache.RequestHandler;
-import org.softuni.javache.WebConstants;
+import org.softuni.broccolina.solet.WebSolet;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,129 +9,109 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.*;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class SoletLoader {
+    private static final String ROOT_APPLICATION_FOLDER_NAME = "ROOT_APPLICATION_FOLDER_NAME";
 
-    public static String APPLICATION_FOLDER_PATH;
+    public final String APPLICATION_FOLDER_PATH;
 
-    private Map<String, HttpSolet> loadedSoletsByApplicationName;
+    private HashMap<String, HttpSolet> loadedSoletsByApplicationName;
 
-    public SoletLoader(String serverRootPath){
+    public SoletLoader(String serverRootPath) {
         this.APPLICATION_FOLDER_PATH =
                 serverRootPath + "apps";
-
-        this.loadedSoletsByApplicationName = new HashMap<>();
     }
 
-
-    private void loadLibraries(String libFolderPath) throws IOException {
-
-        File libDirectory = new File(libFolderPath);
-
-        if(libDirectory.exists() && libDirectory.isDirectory()){
-
-            for (File file : libDirectory.listFiles()) {
-                if(!this.isLibraryFile(file)){
-                    continue;
-                }
-
-                JarFile library = new JarFile(file.getCanonicalPath());
-
-                this.loadLibrary(library, file.getCanonicalPath());
-
-            }
-        }
+    private boolean isLibraryFile(File file) {
+        return file.getName().endsWith(".jar");
     }
 
     private void loadLibrary(JarFile library, String canonicalPath) {
         Enumeration<JarEntry> fileEntries = library.entries();
 
         try {
-            URL[] urls = { new URL("jar:file:" + canonicalPath + "!/") };
+            URL[] urls = {new URL("jar:file:" + canonicalPath + "!/")};
             URLClassLoader ucl = URLClassLoader.newInstance(urls);
 
-            while (fileEntries.hasMoreElements()){
+            while (fileEntries.hasMoreElements()) {
                 JarEntry currentFile = fileEntries.nextElement();
 
-                if(currentFile.isDirectory()
-                        || !currentFile.getName().endsWith(".class")){
-                    continue;
-                }
+                if (currentFile.isDirectory()
+                        || !currentFile.getName().endsWith(".class")) continue;
 
                 String className = currentFile.getName()
                         .replace(".class", "")
                         .replace("/", ".");
 
-                System.out.println(className);
-
                 Class soletClazz = ucl.loadClass(className);
 
-                if(HttpSolet.class.isAssignableFrom(soletClazz)){
+                if (HttpSolet.class.isAssignableFrom(soletClazz)) {
+                    HttpSolet soletObject =
+                            (HttpSolet) soletClazz.getConstructor()
+                                    .newInstance();
 
-                    HttpSolet soletObj = (HttpSolet) soletClazz.getConstructor()
-                            .newInstance();
+                    WebSolet annotation = (WebSolet) soletClazz.getAnnotation(WebSolet.class);
+
+                    if(annotation.loadedOnStartUp()){
+                        soletObject.init();
+                    }
 
                     String applicationPath = new File(canonicalPath).getParent();
+                    String applicationName = applicationPath.substring(applicationPath.lastIndexOf("\\") + 1);
+
+                    applicationName = applicationName.equals(ROOT_APPLICATION_FOLDER_NAME)
+                            ? ""
+                            : "/" + applicationName;
 
                     this.loadedSoletsByApplicationName
-                            .putIfAbsent(applicationPath
-                                            .substring(applicationPath
-                                                    .lastIndexOf("/") + 1),
-                                    soletObj);
+                            .putIfAbsent(applicationName
+                                    + annotation.route()
+                                    , soletObject);
                 }
-
             }
-
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-            return;
-        } catch (ClassNotFoundException
-                | InvocationTargetException
-                | NoSuchMethodException
-                | InstantiationException
-                | IllegalAccessException e) {
+        } catch (MalformedURLException | ClassNotFoundException | InvocationTargetException | NoSuchMethodException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
-
     }
 
-    private boolean isLibraryFile(File file) {
-        return file.getName().endsWith(".jar");
+    private void loadLibraries(String libFolderPath) throws IOException {
+        File libDirectory = new File(libFolderPath);
 
+        if (libDirectory.exists() && libDirectory.isDirectory()) {
+            for (File file : libDirectory.listFiles()) {
+                if (!this.isLibraryFile(file)) {
+                    continue;
+                }
+
+                JarFile library = new JarFile(file.getCanonicalPath());
+                this.loadLibrary(library, file.getCanonicalPath());
+            }
+        }
     }
 
-    public Map<String, HttpSolet> getLoadedSolets(){
+    public Map<String, HttpSolet> getSolets() {
         return Collections.unmodifiableMap(this.loadedSoletsByApplicationName);
     }
 
-    public void loadSolets(){
+    public void loadSolets() {
         this.loadedSoletsByApplicationName = new HashMap<>();
 
         try {
-            File appsDir = new File(this.APPLICATION_FOLDER_PATH);
+            File appsDir = new File(APPLICATION_FOLDER_PATH);
 
-            if(!appsDir.exists()){
-                return;
-            }
+            if (!appsDir.exists()) return;
 
             for (File file : appsDir.listFiles()) {
                 this.loadLibraries(file.getCanonicalPath());
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
-
-
-
-
-
-
-
-
 }

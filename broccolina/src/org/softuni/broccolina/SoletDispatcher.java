@@ -1,19 +1,16 @@
 package org.softuni.broccolina;
 
-import org.softuni.broccolina.solet.HttpSolet;
+import org.softuni.broccolina.solet.*;
 import org.softuni.broccolina.util.SoletLoader;
 import org.softuni.javache.RequestHandler;
-import org.softuni.javache.http.HttpResponse;
-import org.softuni.javache.http.HttpResponseImpl;
-import org.softuni.javache.http.HttpStatus;
+import org.softuni.javache.http.*;
+import org.softuni.javache.io.Reader;
 import org.softuni.javache.io.Writer;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.Map;
 
-public class SoletDispatcher implements RequestHandler{
+public class SoletDispatcher implements RequestHandler {
 
     private final String SERVER_ROOT_PATH;
 
@@ -21,36 +18,49 @@ public class SoletDispatcher implements RequestHandler{
 
     private SoletLoader soletLoader;
 
-    public SoletDispatcher(String serverRootPath){
-        this.intercepted = false;
+    public SoletDispatcher(String serverRootPath) {
         this.SERVER_ROOT_PATH = serverRootPath;
-        this.soletLoader = new SoletLoader(this.SERVER_ROOT_PATH);
+        this.intercepted = false;
+        this.soletLoader = new SoletLoader(SERVER_ROOT_PATH);
         this.soletLoader.loadSolets();
     }
 
     @Override
     public void handleRequest(InputStream inputStream, OutputStream outputStream) {
-        StringBuilder responseContent = new StringBuilder();
-
-        for (Map.Entry<String, HttpSolet> soletEntry : this.soletLoader.getLoadedSolets().entrySet()) {
-
-            System.out.println(soletEntry.getKey() + "< - >" + soletEntry.getValue().getClass().getSimpleName());
-            responseContent.append(soletEntry.getKey() + "< - >" + soletEntry.getValue().getClass().getSimpleName());
-        }
-
-        HttpResponse response = new HttpResponseImpl();
-
-        response.setStatusCode(HttpStatus.OK);
-        response.addHeader("Content-Type", "text/html");
-        response.setContent(responseContent.toString().getBytes());
-
         try {
-            Writer.writeBytes(response.getBytes(), outputStream);
-            this.intercepted = true;
+            String requestContent = new Reader().readAllLines(inputStream);
+
+            HttpSoletRequest request = new HttpSoletRequestImpl(requestContent, null);
+            HttpSoletResponse response = new HttpSoletResponseImpl(outputStream);
+
+            HttpSolet soletCandidate = null;
+
+            for (Map.Entry<String, HttpSolet> soletEntry
+                    : this.soletLoader.getSolets().entrySet()) {
+
+                String soletRoute = soletEntry.getKey();
+
+                if (soletRoute.equals(request.getRequestUrl())) {
+                    soletCandidate = soletEntry.getValue();
+
+                    if(!soletCandidate.isInitialized()){
+                        soletCandidate.init();
+                    }
+
+                }
+            }
+
+            if(soletCandidate != null && soletCandidate.isInitialized()){
+                soletCandidate.service(request, response);
+
+                new Writer().writeBytes(response.getBytes(), outputStream);
+                this.intercepted = true;
+            }
+
         } catch (IOException e) {
+            e.printStackTrace();
             this.intercepted = false;
         }
-
     }
 
     @Override
