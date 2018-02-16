@@ -1,14 +1,12 @@
 package org.softuni.broccolina;
 
 import org.softuni.broccolina.solet.*;
-import org.softuni.broccolina.util.SoletLoader;
+import org.softuni.broccolina.util.ApplicationLoader;
 import org.softuni.javache.RequestHandler;
-import org.softuni.javache.http.*;
 import org.softuni.javache.io.Reader;
 import org.softuni.javache.io.Writer;
 
 import java.io.*;
-import java.util.Map;
 
 public class SoletDispatcher implements RequestHandler {
 
@@ -16,13 +14,13 @@ public class SoletDispatcher implements RequestHandler {
 
     private boolean intercepted;
 
-    private SoletLoader soletLoader;
+    private ApplicationLoader applicationLoader;
 
     public SoletDispatcher(String serverRootPath) {
         this.SERVER_ROOT_PATH = serverRootPath;
         this.intercepted = false;
-        this.soletLoader = new SoletLoader(SERVER_ROOT_PATH);
-        this.soletLoader.loadSolets();
+        this.applicationLoader = new ApplicationLoader(SERVER_ROOT_PATH);
+        this.applicationLoader.loadApplications();
     }
 
     @Override
@@ -35,20 +33,25 @@ public class SoletDispatcher implements RequestHandler {
 
             HttpSolet soletCandidate = null;
 
-            for (Map.Entry<String, HttpSolet> soletEntry
-                    : this.soletLoader.getSolets().entrySet()) {
+            String genericRequestPath = request
+                    .getRequestUrl()
+                    .substring(0,
+                            request.getRequestUrl().indexOf("/", request.getRequestUrl().indexOf("/") + 1) + 1)
+                    + "*";
 
-                String soletRoute = soletEntry.getKey();
+            String requestPath = request.getRequestUrl();
 
-                if (soletRoute.equals(request.getRequestUrl())) {
-                    soletCandidate = soletEntry.getValue();
 
-                    if(!soletCandidate.isInitialized()){
-                        soletCandidate.init();
-                    }
-
-                }
+            if(this.applicationLoader.getSolets().containsKey(genericRequestPath)){
+                soletCandidate = this.applicationLoader.getSolets().get(genericRequestPath);
+            }else if(this.applicationLoader.getSolets().containsKey(requestPath)){
+                soletCandidate = this.applicationLoader.getSolets().get(requestPath);
             }
+
+            if(!soletCandidate.isInitialized()){
+                soletCandidate.init();
+            }
+
 
             if(soletCandidate != null && soletCandidate.isInitialized()){
                 soletCandidate.service(request, response);
