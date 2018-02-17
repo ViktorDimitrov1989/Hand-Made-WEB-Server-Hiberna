@@ -7,6 +7,10 @@ import org.softuni.javache.io.Reader;
 import org.softuni.javache.io.Writer;
 
 import java.io.*;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.util.Arrays;
 
 public class SoletDispatcher implements RequestHandler {
 
@@ -31,7 +35,8 @@ public class SoletDispatcher implements RequestHandler {
             HttpSoletRequest request = new HttpSoletRequestImpl(requestContent, null);
             HttpSoletResponse response = new HttpSoletResponseImpl(outputStream);
 
-            HttpSolet soletCandidate = null;
+            Object soletCandidate = null;
+
 
             String genericRequestPath = request
                     .getRequestUrl()
@@ -48,13 +53,54 @@ public class SoletDispatcher implements RequestHandler {
                 soletCandidate = this.applicationLoader.getSolets().get(requestPath);
             }
 
-            if(!soletCandidate.isInitialized()){
-                soletCandidate.init();
+            if(!(boolean)soletCandidate.getClass().getMethod("isInitialized").invoke(soletCandidate)){
+                soletCandidate.getClass().getMethod("init").invoke(soletCandidate);
             }
 
 
-            if(soletCandidate != null && soletCandidate.isInitialized()){
-                soletCandidate.service(request, response);
+            if(soletCandidate != null
+                    && (boolean)soletCandidate
+                    .getClass()
+                    .getMethod("isInitialized")
+                    .invoke(soletCandidate)){
+
+                Class[] requiredParameters = Arrays.stream(soletCandidate
+                        .getClass()
+                        .getMethods())
+                        .filter((x) -> x.getName().equals("service"))
+                        .findFirst()
+                        .get()
+                        .getParameterTypes();
+
+                Object proxyReq = Proxy.newProxyInstance(soletCandidate
+                        .getClass()
+                        .getClassLoader(),
+                        new Class[]{requiredParameters[0]},
+                        (proxy, method, args) -> Arrays.stream(request
+                                    .getClass()
+                                    .getMethods())
+                                    .filter((x) -> x.getName().equals(method.getName()))
+                                    .findFirst()
+                                    .get()
+                                    .invoke(request, args));
+
+                Object proxyResp = Proxy.newProxyInstance(soletCandidate
+                                .getClass()
+                                .getClassLoader(),
+                        new Class[]{requiredParameters[1]},
+                        (proxy, method, args) -> Arrays.stream(response
+                                .getClass()
+                                .getMethods())
+                                .filter((x) -> x.getName().equals(method.getName()))
+                                .findFirst()
+                                .get()
+                                .invoke(response, args));
+
+
+                soletCandidate
+                        .getClass()
+                        .getMethod("service", requiredParameters[0], requiredParameters[1])
+                        .invoke(soletCandidate, proxyReq, proxyResp);
 
                 new Writer().writeBytes(response.getBytes(), outputStream);
                 this.intercepted = true;
@@ -63,6 +109,12 @@ public class SoletDispatcher implements RequestHandler {
         } catch (IOException e) {
             e.printStackTrace();
             this.intercepted = false;
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
         }
     }
 

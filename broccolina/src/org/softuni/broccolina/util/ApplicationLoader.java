@@ -21,7 +21,7 @@ public class ApplicationLoader {
 
     private JarUnzipUtil jarUnzipUtil;
 
-    private HashMap<String, HttpSolet> loadedSoletsByApplicationName;
+    private HashMap<String, Object> loadedSoletsByApplicationName;
 
     public ApplicationLoader(String serverRootPath) {
         this.APPLICATION_FOLDER_PATH =
@@ -32,23 +32,34 @@ public class ApplicationLoader {
     private void loadIfSolet(Class clazzFile, String applicationName) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
         Class parentClass = clazzFile.getSuperclass();
 
-
         if (parentClass != null &&
-                Arrays.stream(parentClass.getSuperclass()
+                Arrays.stream(parentClass
                 .getInterfaces())
-                .anyMatch(x -> x
+                .anyMatch((x) -> x
                         .getSimpleName()
                         .equals(HttpSolet.class.getSimpleName()))
                 && !Modifier.isAbstract(clazzFile.getModifiers())) {
 
-            HttpSolet soletObject =
-                    (HttpSolet) clazzFile.getConstructor()
+            Object soletObject =
+                        clazzFile.getConstructor()
                             .newInstance();
 
-            WebSolet annotation = (WebSolet) clazzFile.getAnnotation(WebSolet.class);
+            Object annotation = Arrays.stream(clazzFile.getDeclaredAnnotations())
+                    .filter(x -> x.annotationType()
+                            .getSimpleName()
+                            .equals(WebSolet.class.getSimpleName()))
+                    .findFirst()
+                    .orElse(null);
 
-            if(annotation.loadedOnStartUp()){
-                soletObject.init();
+            if(annotation == null){
+                return;
+            }
+
+            if((boolean)annotation
+                    .getClass()
+                    .getMethod("loadedOnStartUp")
+                    .invoke(annotation)){
+                soletObject.getClass().getMethod("init").invoke(soletObject);
             }
 
 
@@ -56,9 +67,15 @@ public class ApplicationLoader {
                     ? ""
                     : "/" + applicationName;
 
+            String annotationRoute = annotation
+                    .getClass()
+                    .getMethod("route")
+                    .invoke(annotation)
+                    .toString();
+
             this.loadedSoletsByApplicationName
                     .putIfAbsent(applicationName
-                                    + annotation.route()
+                                    + annotationRoute
                             , soletObject);
         }
 
@@ -165,7 +182,7 @@ public class ApplicationLoader {
         }
     }
 
-    public Map<String, HttpSolet> getSolets() {
+    public Map<String, Object> getSolets() {
         return Collections.unmodifiableMap(this.loadedSoletsByApplicationName);
     }
 
